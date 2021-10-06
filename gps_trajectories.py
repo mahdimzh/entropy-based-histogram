@@ -46,22 +46,10 @@ class GpsTrajectories:
             'DATE_STRING': [],
             'TIME_STRING': [],
         })
-        self.consecutive_interval_differences, self.sample_rates, self.sample_rate_frequencies, self.pi = ([],) * 4
+        self.consecutive_interval_differences, self.sample_rates, self.sample_rate_frequencies, self.pi = ([
+        ],) * 4
         self.n = 0
         self.threshold = 0
-
-    def calculate_consecutive_time_interval_differences(self):
-        prev_date = None
-        consecutive_interval_differences = []
-        for index, row in self.data.iterrows():
-            date = parser.parse(row['DATE_STRING'] + ' ' + row['TIME_STRING'])
-            if prev_date is not None:
-                diff = date - prev_date
-                seconds = int(round(diff.seconds))
-                consecutive_interval_differences.append(seconds)
-            prev_date = date
-
-        return consecutive_interval_differences
 
     def set_threshold(self, t):
         self.threshold = t
@@ -77,6 +65,37 @@ class GpsTrajectories:
 
     def set_output(self, o):
         self.output = o
+
+    def read_trajectory(self, data_path=None):
+        path = data_path if data_path is not None else self.data_path
+        skip_line = find_first_line(path)
+        df = pd.read_csv(path,
+                         names=['LATITUDE', 'LONGITUDE', 'UNKNOWN',
+                                'ALTITUDE', 'DATE', 'DATE_STRING', 'TIME_STRING'],
+                         sep=',', skiprows=skip_line)
+        self.data = self.data.append(df)
+
+        return self.data
+
+    def calculate_consecutive_time_interval_differences(self):
+        prev_date = None
+        consecutive_interval_differences = []
+        for index, row in self.data.iterrows():
+            date = parser.parse(row['DATE_STRING'] + ' ' + row['TIME_STRING'])
+            if prev_date is not None:
+                diff = date - prev_date
+                seconds = int(round(diff.seconds))
+                consecutive_interval_differences.append(seconds)
+            prev_date = date
+
+        return consecutive_interval_differences
+
+    def calculate_frequencies_and_probabilities(self):
+        self.consecutive_interval_differences = self.calculate_consecutive_time_interval_differences()
+        self.sample_rates, self.sample_rate_frequencies = np.unique(
+            np.array(self.consecutive_interval_differences), return_counts=True)
+        self.n = sum(self.sample_rate_frequencies)
+        self.pi = self.sample_rate_frequencies / self.n
 
     def entropy_based_threshold_calculation(self):
         # dict(zip(self.unique, self.counts))
@@ -100,50 +119,26 @@ class GPSTrajectoriesTest(GpsTrajectories):
         super().set_name(name)
         super().set_directory(directory)
         super().set_output(output)
-
-    def read_and_analyze_trajectory(self):
-        skip_line = find_first_line(self.data_path)
-        self.data = pd.read_csv(self.data_path,
-                                names=['LATITUDE', 'LONGITUDE', 'UNKNOWN', 'ALTITUDE', 'DATE', 'DATE_STRING',
-                                       'TIME_STRING'], sep=',', skiprows=skip_line)
-        self.consecutive_interval_differences = self.calculate_consecutive_time_interval_differences()
-        self.sample_rates, self.sample_rate_frequencies = np.unique(
-            np.array(self.consecutive_interval_differences), return_counts=True)
-        self.n = sum(self.sample_rate_frequencies)
-        self.pi = self.sample_rate_frequencies / self.n
-        return self.data
+        print("GPS trajectories to traces for " + data_path)
 
     def divide_gps_trajectories_into_gps_traces(self):
         start_index = 0
         file_index = 1
+        path = self.output + self.directory
 
         for index, interval in enumerate(self.consecutive_interval_differences):
             if interval > self.threshold:
-                path = self.output + self.directory
-                pd_to_file(self.data[start_index:index + 1], path, self.name + "." + str(file_index))
+                pd_to_file(self.data[start_index:index + 1],
+                           path, self.name + "." + str(file_index))
                 start_index = index + 1
                 file_index += 1
 
         if start_index is not (len(self.consecutive_interval_differences) + 1):
-            pd_to_file(self.data[start_index:], path, self.name + "." + str(file_index))
+            pd_to_file(self.data[start_index:], path,
+                       self.name + "." + str(file_index))
 
 
 class GPSTrajectoriesTrain(GpsTrajectories):
     def __init__(self):
         super().__init__()
-
-    def read_trajectory(self, data_path):
-        skip_line = find_first_line(data_path)
-        df = pd.read_csv(data_path,
-                         names=['LATITUDE', 'LONGITUDE', 'UNKNOWN', 'ALTITUDE', 'DATE', 'DATE_STRING', 'TIME_STRING'],
-                         sep=',', skiprows=skip_line)
-        self.data = self.data.append(df)
-
-        return self.data
-
-    def calculate_frequencies_and_probabilities(self):
-        self.consecutive_interval_differences = self.calculate_consecutive_time_interval_differences()
-        self.sample_rates, self.sample_rate_frequencies = np.unique(
-            np.array(self.consecutive_interval_differences), return_counts=True)
-        self.n = sum(self.sample_rate_frequencies)
-        self.pi = self.sample_rate_frequencies / self.n
+        print("Start Training ...")
