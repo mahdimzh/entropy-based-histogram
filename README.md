@@ -7,11 +7,12 @@ used an entropy-based-histogram to divide GPS trajectories into GPS traces.
 
 ## Usage
 1. Download or clone repository.
-2. Edit the data_path and out_data_path in `main.py`.
-3. Set the number_of_train_files in `main.py`.
-3. Run the code using `python3.9 main.py`.
-4. After training, you can see the threshold and the GPS trajectories will divide into GPS traces
-5. Enjoy!
+2. Download the dataset from [GeoLife GPS Trajectories](https://www.microsoft.com/en-us/download/details.aspx?id=52367)
+3. Edit the data_path and out_data_path in `main.py`.
+4. Set the number_of_train_files in `main.py`.
+5. Run the code using `python3.9 main.py`.
+6. After training, you can see the threshold and the GPS trajectories will divide into GPS traces
+7. Enjoy!
 
 ## Explanation
 [Screen Recording](https://drive.google.com/file/d/1NDR88tCj_SD2h_zGI2Q3hm1vrmOBv26A/view?usp=sharing)
